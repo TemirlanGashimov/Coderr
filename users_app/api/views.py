@@ -3,14 +3,17 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from users_app.models import UserProfile
+from rest_framework.permissions import IsAuthenticated
 
-from users_app.api.serializers import RegistrationSerializer, LoginSerializer
+from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer
+
 
 class RegistrationAPIView(APIView):
 
     permission_classes = [AllowAny]
 
-    def post (self, request):
+    def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -28,6 +31,7 @@ class RegistrationAPIView(APIView):
             return Response(data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginAPIView(APIView):
 
@@ -50,6 +54,18 @@ class LoginAPIView(APIView):
             return Response(data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-    
 
+
+class ProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            user_profile = UserProfile.objects.get(user__id=pk)
+            serializer = ProfileSerializer(user_profile)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except UserProfile.DoesNotExist:
+            return Response(
+                {"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
