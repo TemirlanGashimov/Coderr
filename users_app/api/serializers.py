@@ -21,7 +21,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "Password fields didn't match."}
             )
-        
+
         if User.objects.filter(email=attrs['email']).exists():
             raise serializers.ValidationError(
                 {"email": "Email is already in use."}
@@ -44,3 +44,19 @@ class RegistrationSerializer(serializers.ModelSerializer):
             type=user_type
         )
         return user
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        user = authenticate(
+            username=attrs['username'], password=attrs['password']
+        )
+        if not user:
+            raise serializers.ValidationError(
+                {"detail": "Invalid credentials."}
+            )
+        attrs['user'] = user
+        return attrs
