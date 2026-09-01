@@ -81,4 +81,29 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ['user', 'username', 'first_name', 'last_name', 'file', 'location',
                   'tel', 'description', 'working_hours', 'type', 'email', 'created_at']
 
-        
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    email = serializers.EmailField(source='user.email')
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+
+        instance.user.last_name = user_data.get('last_name', instance.user.last_name)
+        instance.user.first_name = user_data.get('first_name', instance.user.first_name)
+        instance.location = validated_data.get('location', instance.location)
+        instance.tel = validated_data.get('tel', instance.tel)
+        instance.description = validated_data.get('description', instance.description)
+        instance.working_hours = validated_data.get('working_hours', instance.working_hours)
+        instance.user.email = user_data.get('email', instance.user.email)
+
+        instance.user.save()
+        instance.save()
+        return instance
+
+    class Meta:
+        model = UserProfile
+        fields = ['first_name', 'last_name', 'location', 'tel', 'description', 'working_hours', 'email']
+
