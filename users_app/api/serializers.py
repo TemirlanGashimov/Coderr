@@ -6,7 +6,8 @@ from users_app.models import UserProfile
 
 class RegistrationSerializer(serializers.ModelSerializer):
 
-    repeat_password = serializers.CharField(write_only=True)
+    repeated_password = serializers.CharField(write_only=True)
+
     type = serializers.ChoiceField(
         choices=UserProfile.TYPE_CHOICES, write_only=True)
 
@@ -21,7 +22,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 {"password": "Password fields didn't match."}
             )
         
-        if User.object.filter(email=attrs['email']).exists():
+        if User.objects.filter(email=attrs['email']).exists():
             raise serializers.ValidationError(
                 {"email": "Email is already in use."}
             )
