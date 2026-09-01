@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from users_app.models import UserProfile
 from rest_framework.permissions import IsAuthenticated
 
-from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer
+from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
 
 
 class RegistrationAPIView(APIView):
@@ -65,6 +65,31 @@ class ProfileAPIView(APIView):
             serializer = ProfileSerializer(user_profile)
 
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except UserProfile.DoesNotExist:
+            return Response(
+                {"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def patch(self, request, pk):
+        try:
+            user_profile = UserProfile.objects.get(user__id=pk)
+
+            if request.user.id != pk:
+                return Response(
+                    {"detail": "You do not have permission to update this profile."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            serializer = ProfileUpdateSerializer(
+                user_profile, data=request.data, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                response_serializer = ProfileSerializer(user_profile)
+
+                return Response(response_serializer.data,status=status.HTTP_200_OK)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except UserProfile.DoesNotExist:
             return Response(
