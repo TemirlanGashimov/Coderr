@@ -7,7 +7,7 @@ from users_app.models import UserProfile
 class RegistrationSerializer(serializers.ModelSerializer):
 
     repeat_password = serializers.CharField(write_only=True)
-    type = serializers.ChoisField(
+    type = serializers.ChoiceField(
         choices=UserProfile.TYPE_CHOICES, write_only=True)
 
     class Meta:
