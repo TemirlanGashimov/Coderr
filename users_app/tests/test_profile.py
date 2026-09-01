@@ -35,9 +35,28 @@ class ProfileHappyTestCase(TestCase):
         self.assertEqual(response.data['type'], 'customer')
         self.assertEqual(response.data['file'], '')
 
+    def test_patch_own_profile(self):
+        url = reverse('profile', kwargs={'pk': self.user.id})
+        data = {
+            'first_name': 'Max',
+            'last_name': 'Mustermann',
+            'location': 'Berlin',
+            'email': 'max@test.de'
+        }
+        response = self.client.patch(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.user.refresh_from_db()
+        self.profile.refresh_from_db()
+
+        self.assertEqual(self.user.first_name, 'Max')
+        self.assertEqual(self.user.last_name, 'Mustermann')
+        self.assertEqual(self.user.email, 'max@test.de')
+        self.assertEqual(self.profile.location, 'Berlin')
+
 
 class ProfileUnhappyTestCase(TestCase):
-
 
     def setUp(self):
         self.user = User.objects.create_user(
@@ -48,8 +67,8 @@ class ProfileUnhappyTestCase(TestCase):
         self.profile = UserProfile.objects.create(
             user=self.user,
             type='customer'
-            )
-        
+        )
+
         self.client = APIClient()
 
     def test_get_profile_unauthenticated(self):
@@ -64,6 +83,38 @@ class ProfileUnhappyTestCase(TestCase):
         url = reverse('profile', kwargs={'pk': 999})
 
         response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'], 'User profile not found.')
+
+    def test_patch_profile_unauthenticated(self):
+        url = reverse('profile', kwargs={'pk': self.user.id})
+        response = self.client.patch(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_other_user_profile_forbidden(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='otheruser@test.de',
+            password='Test12345!')
+
+        other_profile = UserProfile.objects.create(
+            user=other_user,
+            type='customer'
+        )
+        self.client.force_authenticate(user=self.user)
+        url = reverse('profile', kwargs={'pk': other_user.id})
+        response = self.client.patch(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data['detail'], 'You do not have permission to update this profile.')
+
+    def test_patch_profile_not_found(self):
+        self.client.force_authenticate(user=self.user)
+        url = reverse('profile', kwargs={'pk': 999})
+        response = self.client.patch(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'], 'User profile not found.')
