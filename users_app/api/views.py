@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from users_app.models import UserProfile
 from rest_framework.permissions import IsAuthenticated
 
-from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
+from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer, BusinessProfileSerializer
 
 
 class RegistrationAPIView(APIView):
@@ -94,3 +94,13 @@ class ProfileAPIView(APIView):
         except UserProfile.DoesNotExist:
             return Response(
                 {"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class BusinessProfileListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        business_profiles = UserProfile.objects.filter(type='business')
+        serializer = BusinessProfileSerializer(business_profiles, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
