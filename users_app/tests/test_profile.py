@@ -76,6 +76,26 @@ class BusinessProfileHappyTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+class CustomerProfileHappyTestCase(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='max@test.de',
+            password='Test12345'
+        )
+        self.profile = UserProfile.objects.create(
+            user=self.user,
+            type='customer'
+        )
+        self.token, _ = Token.objects.get_or_create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+    def test_get_customer_profiles(self):
+        url = reverse('customer-profiles')
+        repsonse = self.client.get(url)
+        self.assertEqual(repsonse.status_code, status.HTTP_200_OK)
 
 
 class ProfileUnhappyTestCase(TestCase):
@@ -145,5 +165,12 @@ class BusinessProfileUnHappyTestCase(TestCase):
 
     def test_get_business_profiles_unauthenticated(self):
         url = reverse('business-profiles')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+class CustomerProfileUnhappyTestCase(TestCase):
+        
+    def test_get_customer_profiles_unauthenticated(self):
+        url = reverse('customer-profiles')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
