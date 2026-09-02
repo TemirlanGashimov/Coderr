@@ -65,10 +65,12 @@ class LoginSerializer(serializers.Serializer):
 class ProfileSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(source='user.username', read_only=True)
-    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    first_name = serializers.CharField(
+        source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
-    created_at = serializers.DateTimeField(source='user.date_joined', read_only=True)#
+    created_at = serializers.DateTimeField(
+        source='user.date_joined', read_only=True)
     file = serializers.SerializerMethodField()
 
     def get_file(self, obj):
@@ -91,12 +93,16 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
 
-        instance.user.last_name = user_data.get('last_name', instance.user.last_name)
-        instance.user.first_name = user_data.get('first_name', instance.user.first_name)
+        instance.user.last_name = user_data.get(
+            'last_name', instance.user.last_name)
+        instance.user.first_name = user_data.get(
+            'first_name', instance.user.first_name)
         instance.location = validated_data.get('location', instance.location)
         instance.tel = validated_data.get('tel', instance.tel)
-        instance.description = validated_data.get('description', instance.description)
-        instance.working_hours = validated_data.get('working_hours', instance.working_hours)
+        instance.description = validated_data.get(
+            'description', instance.description)
+        instance.working_hours = validated_data.get(
+            'working_hours', instance.working_hours)
         instance.user.email = user_data.get('email', instance.user.email)
 
         instance.user.save()
@@ -105,5 +111,24 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['first_name', 'last_name', 'location', 'tel', 'description', 'working_hours', 'email']
+        fields = ['first_name', 'last_name', 'location',
+                  'tel', 'description', 'working_hours', 'email']
 
+
+class BusinessProfileSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(
+        source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    file = serializers.SerializerMethodField()
+
+    def get_file(self, obj):
+        if not obj.file:
+            return ""
+        return obj.file.url
+
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'username', 'first_name', 'last_name', 'file',
+                  'location', 'tel', 'description', 'working_hours', 'type']
