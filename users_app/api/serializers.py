@@ -132,3 +132,22 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ['user', 'username', 'first_name', 'last_name', 'file',
                   'location', 'tel', 'description', 'working_hours', 'type']
+
+
+class CustomerProfileSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(
+        source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    file = serializers.SerializerMethodField()
+
+    def get_file(self, obj):
+        if not obj.file:
+            return ""
+        return obj.file.url
+
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'username', 'first_name',
+                  'last_name', 'file', 'uploaded_at', 'type']
