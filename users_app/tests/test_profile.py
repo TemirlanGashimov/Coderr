@@ -1,27 +1,38 @@
 from django.contrib.auth.models import User
 from django.urls import reverse
-from rest_framework import status
 from django.test import TestCase
-from users_app.models import UserProfile
+
+from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
+from users_app.models import UserProfile
 
-class ProfileHappyTestCase(TestCase):
+
+class AuthenticatedProfileTestCase(TestCase):
+    user_type = 'customer'
 
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
             email='testuser@test.de',
-            password='Test12345!')
+            password='Test12345!'
+        )
 
         self.profile = UserProfile.objects.create(
             user=self.user,
-            type='customer'
+            type=self.user_type
         )
+
         self.token, _ = Token.objects.get_or_create(user=self.user)
+
         self.client = APIClient()
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.token.key
+        )
+
+
+class ProfileHappyTestCase(AuthenticatedProfileTestCase):
 
     def test_get_profile_with_valid_user_id(self):
         url = reverse('profile', kwargs={'pk': self.user.id})
@@ -37,12 +48,14 @@ class ProfileHappyTestCase(TestCase):
 
     def test_patch_own_profile(self):
         url = reverse('profile', kwargs={'pk': self.user.id})
+
         data = {
             'first_name': 'Max',
             'last_name': 'Mustermann',
             'location': 'Berlin',
             'email': 'max@test.de'
         }
+
         response = self.client.patch(url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -56,121 +69,127 @@ class ProfileHappyTestCase(TestCase):
         self.assertEqual(self.profile.location, 'Berlin')
 
 
-class BusinessProfileHappyTestCase(TestCase):
-    
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='businessuser',
-            email='business@test.de',
-            password='Test12345!')
-        self.profile = UserProfile.objects.create(
-            user=self.user,
-            type='business'
-        )
-        self.token, _ = Token.objects.get_or_create(user=self.user)
-        self.client = APIClient()
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+class BusinessProfileHappyTestCase(AuthenticatedProfileTestCase):
+    user_type = 'business'
 
     def test_get_business_profiles(self):
         url = reverse('business-profiles')
+
         response = self.client.get(url)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-class CustomerProfileHappyTestCase(TestCase):
 
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='max@test.de',
-            password='Test12345'
-        )
-        self.profile = UserProfile.objects.create(
-            user=self.user,
-            type='customer'
-        )
-        self.token, _ = Token.objects.get_or_create(user=self.user)
-        self.client = APIClient()
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+class CustomerProfileHappyTestCase(AuthenticatedProfileTestCase):
 
     def test_get_customer_profiles(self):
         url = reverse('customer-profiles')
-        repsonse = self.client.get(url)
-        self.assertEqual(repsonse.status_code, status.HTTP_200_OK)
-
-
-class ProfileUnhappyTestCase(TestCase):
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='testuser@test.de',
-            password='Test12345!')
-
-        self.profile = UserProfile.objects.create(
-            user=self.user,
-            type='customer'
-        )
-
-        self.client = APIClient()
-
-    def test_get_profile_unauthenticated(self):
-        url = reverse('profile', kwargs={'pk': self.user.id})
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ProfileUnhappyTestCase(AuthenticatedProfileTestCase):
+
+    def test_get_profile_unauthenticated(self):
+        self.client.credentials()
+
+        url = reverse('profile', kwargs={'pk': self.user.id})
+        response = self.client.get(url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
 
     def test_get_profile_not_found(self):
-        self.client.force_authenticate(user=self.user)
         url = reverse('profile', kwargs={'pk': 999})
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['detail'], 'User profile not found.')
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND
+        )
+        self.assertEqual(
+            response.data['detail'],
+            'User profile not found.'
+        )
 
     def test_patch_profile_unauthenticated(self):
+        self.client.credentials()
+
         url = reverse('profile', kwargs={'pk': self.user.id})
         response = self.client.patch(url, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
 
     def test_patch_other_user_profile_forbidden(self):
         other_user = User.objects.create_user(
             username='otheruser',
             email='otheruser@test.de',
-            password='Test12345!')
+            password='Test12345!'
+        )
 
-        other_profile = UserProfile.objects.create(
+        UserProfile.objects.create(
             user=other_user,
             type='customer'
         )
-        self.client.force_authenticate(user=self.user)
+
         url = reverse('profile', kwargs={'pk': other_user.id})
         response = self.client.patch(url, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
-            response.data['detail'], 'You do not have permission to update this profile.')
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+        self.assertEqual(
+            response.data['detail'],
+            'You do not have permission to update this profile.'
+        )
 
     def test_patch_profile_not_found(self):
-        self.client.force_authenticate(user=self.user)
         url = reverse('profile', kwargs={'pk': 999})
+
         response = self.client.patch(url, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['detail'], 'User profile not found.')
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND
+        )
+        self.assertEqual(
+            response.data['detail'],
+            'User profile not found.'
+        )
 
-class BusinessProfileUnHappyTestCase(TestCase):
+
+class BusinessProfileUnhappyTestCase(AuthenticatedProfileTestCase):
 
     def test_get_business_profiles_unauthenticated(self):
+        self.client.credentials()
+
         url = reverse('business-profiles')
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-class CustomerProfileUnhappyTestCase(TestCase):
-        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
+
+
+class CustomerProfileUnhappyTestCase(AuthenticatedProfileTestCase):
+
     def test_get_customer_profiles_unauthenticated(self):
+        self.client.credentials()
+
         url = reverse('customer-profiles')
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
