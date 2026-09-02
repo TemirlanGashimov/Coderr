@@ -56,6 +56,28 @@ class ProfileHappyTestCase(TestCase):
         self.assertEqual(self.profile.location, 'Berlin')
 
 
+class BusinessProfileHappyTestCase(TestCase):
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='businessuser',
+            email='business@test.de',
+            password='Test12345!')
+        self.profile = UserProfile.objects.create(
+            user=self.user,
+            type='business'
+        )
+        self.token, _ = Token.objects.get_or_create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+    def test_get_business_profiles(self):
+        url = reverse('business-profiles')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+
 class ProfileUnhappyTestCase(TestCase):
 
     def setUp(self):
@@ -118,3 +140,10 @@ class ProfileUnhappyTestCase(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'], 'User profile not found.')
+
+class BusinessProfileUnHappyTestCase(TestCase):
+
+    def test_get_business_profiles_unauthenticated(self):
+        url = reverse('business-profiles')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
