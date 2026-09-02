@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from users_app.models import UserProfile
 from rest_framework.permissions import IsAuthenticated
 
-from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer, BusinessProfileSerializer
+from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer, BusinessProfileSerializer, CustomerProfileSerializer
 
 
 class RegistrationAPIView(APIView):
@@ -79,7 +79,7 @@ class ProfileAPIView(APIView):
                     {"detail": "You do not have permission to update this profile."},
                     status=status.HTTP_403_FORBIDDEN
                 )
-            
+
             serializer = ProfileUpdateSerializer(
                 user_profile, data=request.data, partial=True)
 
@@ -87,7 +87,7 @@ class ProfileAPIView(APIView):
                 serializer.save()
                 response_serializer = ProfileSerializer(user_profile)
 
-                return Response(response_serializer.data,status=status.HTTP_200_OK)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -99,8 +99,18 @@ class ProfileAPIView(APIView):
 class BusinessProfileListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self,request):
+    def get(self, request):
         business_profiles = UserProfile.objects.filter(type='business')
         serializer = BusinessProfileSerializer(business_profiles, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CustomerProfileListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        customer_profiles = UserProfile.objects.filter(type='customer')
+        serializer = CustomerProfileSerializer(customer_profiles, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
