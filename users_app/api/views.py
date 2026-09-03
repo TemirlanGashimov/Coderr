@@ -2,19 +2,21 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import generics
+from rest_framework.exceptions import NotFound, PermissionDenied
 from users_app.models import UserProfile
 from rest_framework.permissions import IsAuthenticated
 
 from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer, BusinessProfileSerializer, CustomerProfileSerializer
 
 
-class RegistrationAPIView(APIView):
+class RegistrationAPIView(generics.CreateAPIView):
 
     permission_classes = [AllowAny]
+    serializer_class = RegistrationSerializer
 
-    def post(self, request):
-        serializer = RegistrationSerializer(data=request.data)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             saved_account = serializer.save()
@@ -33,12 +35,13 @@ class RegistrationAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LoginAPIView(APIView):
+class LoginAPIView(generics.CreateAPIView):
 
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -56,61 +59,51 @@ class LoginAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProfileAPIView(APIView):
+class ProfileAPIView(generics.RetrieveUpdateAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk):
+    def get_object(self):
         try:
-            user_profile = UserProfile.objects.get(user__id=pk)
-            serializer = ProfileSerializer(user_profile)
-
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            user_profile = self.get_queryset().get(user__id=self.kwargs['pk'])
 
         except UserProfile.DoesNotExist:
-            return Response(
-                {"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            raise NotFound("User profile not found.")
 
-    def patch(self, request, pk):
-        try:
-            user_profile = UserProfile.objects.get(user__id=pk)
+        if self.request.method == 'PATCH' and self.request.user.id != self.kwargs['pk']:
+            raise PermissionDenied(
+                "You do not have permission to update this profile."
+            )
+        return user_profile
 
-            if request.user.id != pk:
-                return Response(
-                    {"detail": "You do not have permission to update this profile."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return ProfileUpdateSerializer
+        return ProfileSerializer
 
-            serializer = ProfileUpdateSerializer(
-                user_profile, data=request.data, partial=True)
-
-            if serializer.is_valid():
-                serializer.save()
-                response_serializer = ProfileSerializer(user_profile)
-
-                return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        except UserProfile.DoesNotExist:
-            return Response(
-                {"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        response_serializer = ProfileSerializer(instance)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
-class BusinessProfileListAPIView(APIView):
+class BusinessProfileListAPIView(generics.ListAPIView):
+    serializer_class = BusinessProfileSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        business_profiles = UserProfile.objects.filter(type='business')
-        serializer = BusinessProfileSerializer(business_profiles, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return UserProfile.objects.filter(type='business')
 
 
-class CustomerProfileListAPIView(APIView):
+class CustomerProfileListAPIView(generics.ListAPIView):
+    serializer_class = CustomerProfileSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        customer_profiles = UserProfile.objects.filter(type='customer')
-        serializer = CustomerProfileSerializer(customer_profiles, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return UserProfile.objects.filter(type='customer')
