@@ -70,6 +70,70 @@ class OfferPostHappyTestCase(OfferBaseTestCase):
         self.assertEqual(offer.user, self.user)
 
 
+class OfferGetHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offers(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_offers_by_creator_id(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        response = self.client.get(self.url, {'creator_id': self.user.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['id'], offer.id)
+
+    def test_get_offer_by_min_price(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+
+        OfferDetail.objects.create(
+            offer=offer, title='Basic Design', revisions=2, delivery_time_in_days=5,
+            price=50, features=['Logo Design'], offer_type='basic')
+
+        response = self.client.get(self.url, {'min_price': 100})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+
+    def test_get_offer_by_max_delivery_time(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+
+        OfferDetail.objects.create(
+            offer=offer, title='Basic Design', revisions=2,
+            delivery_time_in_days=10, price=100, features=['Logo Design'], offer_type='basic')
+
+        response = self.client.get(self.url, {'max_delivery_time': 7})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+
+    def test_get_offer_by_search(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Grafik Design', description='Test Beschreibung')
+
+        response = self.client.get(self.url, {'search': 'Grafik'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['id'], offer.id)
+
+    def test_get_offers_ordered_by_min_price(self):
+        offer_expensive = Offer.objects.create(
+            user=self.user, title='Expensive Offer', description='Test')
+        OfferDetail.objects.create(offer=offer_expensive, title='Expensive Detail',
+                                   revisions=1, delivery_time_in_days=5, price=200, features=[], offer_type='basic')
+
+        offer_cheap = Offer.objects.create(
+            user=self.user, title='Cheap Offer', description='Test')
+        OfferDetail.objects.create(offer=offer_cheap, title='Cheap Detail', revisions=1, delivery_time_in_days=5,
+                                   price=50, features=[], offer_type='basic')
+
+        response = self.client.get(self.url, {'ordering': 'min_price'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'][0]['id'], offer_cheap.id)
+        self.assertEqual(response.data['results'][1]['id'], offer_expensive.id)
+
+
 class OfferPostUnhappyTestCase(OfferBaseTestCase):
 
     def test_post_offer_unauthenticated(self):
@@ -96,3 +160,16 @@ class OfferPostUnhappyTestCase(OfferBaseTestCase):
         invalid_data['details'][2]['offer_type'] = 'standard'
         response = self.client.post(self.url, invalid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class OfferGetUnHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offers_unauthenticated(self):
+        self.client.credentials()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
