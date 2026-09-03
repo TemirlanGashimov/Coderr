@@ -1,5 +1,7 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 from offers_app.models import OfferDetail, Offer
+from django.db.models import Min
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
@@ -17,7 +19,7 @@ class OfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
         fields = [
-            'id','title', 'image', 'description', 'details'
+            'id', 'title', 'image', 'description', 'details'
         ]
 
     def validate(self, data):
@@ -48,3 +50,46 @@ class OfferSerializer(serializers.ModelSerializer):
             OfferDetail.objects.create(offer=offer, **detail_data)
 
         return offer
+
+
+class OfferDetailListSerializer(serializers.ModelSerializer):
+
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferDetail
+        fields = [
+            'id', 'url'
+        ]
+
+    def get_url(self, obj):
+        return f"/offerdetails/{obj.id}/"
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username']
+
+
+class OfferListSerializer(serializers.ModelSerializer):
+
+    details = OfferDetailListSerializer(many=True, read_only=True)
+    min_price = serializers.SerializerMethodField()
+    min_delivery_time = serializers.SerializerMethodField()
+    user_details = UserDetailSerializer(source='user', read_only=True)
+
+    class Meta:
+        model = Offer
+        fields = [
+            'id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at',
+            'details', 'min_price', 'min_delivery_time', 'user_details'
+        ]
+
+    def get_min_price(self, obj):
+        result = obj.details.aggregate(Min("price"))
+        return result['price__min']
+
+    def get_min_delivery_time(self, obj):
+        result = obj.details.aggregate(Min("delivery_time_in_days"))
+        return result['delivery_time_in_days__min']
