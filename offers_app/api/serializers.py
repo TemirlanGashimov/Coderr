@@ -93,3 +93,25 @@ class OfferListSerializer(serializers.ModelSerializer):
     def get_min_delivery_time(self, obj):
         result = obj.details.aggregate(Min("delivery_time_in_days"))
         return result['delivery_time_in_days__min']
+
+
+class OfferRetrieveSerializer(serializers.ModelSerializer):
+    details = OfferDetailListSerializer(many=True, read_only=True)
+    min_price = serializers.SerializerMethodField()
+    min_delivery_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Offer
+        fields = [
+            'id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at',
+            'details', 'min_price', 'min_delivery_time'
+        ]
+    
+    def get_min_price(self, obj):
+        result = obj.details.aggregate(Min("price"))
+        return result['price__min']
+    
+    def get_min_delivery_time(self, obj):
+       result = obj.details.aggregate(Min("delivery_time_in_days"))
+       return result['delivery_time_in_days__min']
+    
