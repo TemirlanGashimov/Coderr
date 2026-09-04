@@ -134,6 +134,17 @@ class OfferGetHappyTestCase(OfferBaseTestCase):
         self.assertEqual(response.data['results'][1]['id'], offer_expensive.id)
 
 
+class OfferRetrieveGetHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offers_pk(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], offer.pk)
+
+
 class OfferPostUnhappyTestCase(OfferBaseTestCase):
 
     def test_post_offer_unauthenticated(self):
@@ -173,3 +184,19 @@ class OfferGetUnHappyTestCase(OfferBaseTestCase):
             response.status_code,
             status.HTTP_200_OK
         )
+
+
+class OfferRetrieveGetUnHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offers_pk_unathenticated(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.client.credentials()
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_offer_pk_not_found(self):
+        self.url = reverse("offer", kwargs={"pk": 99999})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
