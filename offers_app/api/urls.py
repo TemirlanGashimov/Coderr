@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import OfferListCreateAPIView
+from .views import OfferListCreateAPIView, OfferRetrieveUpdateDestroyAPIView
 
 urlpatterns = [
     path('offers/', OfferListCreateAPIView.as_view(), name='offers'),
+    path('offers/<int:pk>/', OfferRetrieveUpdateDestroyAPIView.as_view(), name='offer'),
 ]
