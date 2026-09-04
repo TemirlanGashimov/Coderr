@@ -9,7 +9,7 @@ from .permissions import IsBusinessUser
 from django.db.models import Min
 
 
-from .serializers import OfferSerializer, OfferListSerializer
+from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -69,3 +69,7 @@ class OfferListCreateAPIView(generics.ListCreateAPIView):
 
         return queryset 
 
+class OfferRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Offer.objects.all()
+    serializer_class = OfferRetrieveSerializer
+    permission_classes = [IsAuthenticated]
