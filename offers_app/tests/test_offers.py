@@ -145,6 +145,35 @@ class OfferRetrieveGetHappyTestCase(OfferBaseTestCase):
         self.assertEqual(response.data['id'], offer.pk)
 
 
+class OfferRetrievePatchHappyTestCase(OfferBaseTestCase):
+
+    def test_patch_offer_title(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        data = {"title": "neue title"}
+        response = self.client.patch(self.url, data, format='json')
+        offer.refresh_from_db()
+        self.assertEqual(offer.title, "neue title")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_patch_single_offer_detail(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        detail_offer = OfferDetail.objects.create(
+            offer=offer, title="neue_title", revisions=2, delivery_time_in_days=5, price=130, offer_type="basic")
+        detail_offer_standard = OfferDetail.objects.create(
+            offer=offer, title="Standard Design", revisions=5, delivery_time_in_days=7, price=200, offer_type="standard")
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        data = {"details": [{"revisions": 3, "offer_type": "basic"}]}
+        response = self.client.patch(self.url, data, format='json')
+        detail_offer.refresh_from_db()
+        detail_offer_standard.refresh_from_db()
+        self.assertEqual(detail_offer.revisions, 3)
+        self.assertEqual(detail_offer_standard.revisions, 5)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
 class OfferPostUnhappyTestCase(OfferBaseTestCase):
 
     def test_post_offer_unauthenticated(self):
@@ -199,4 +228,44 @@ class OfferRetrieveGetUnHappyTestCase(OfferBaseTestCase):
     def test_get_offer_pk_not_found(self):
         self.url = reverse("offer", kwargs={"pk": 99999})
         response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OfferRetrievePatchUnHappyTestCase(OfferBaseTestCase):
+
+    def test_patch_offer_detail_without_offer_type(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        detail_offer = OfferDetail.objects.create(
+            offer=offer, title="neue_title", revisions=2, delivery_time_in_days=5, price=130, offer_type="basic")
+        data = {"details": [{"revisions": 3}]}
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.patch(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_offer_unauthenticated(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.client.credentials()
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.patch(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_offer_forbidden_for_non_owner(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='otheruser@test.de',
+            password='Test12345!'
+        )
+        token = Token.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.patch(self.url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_offer_not_found(self):
+        self.url = reverse("offer", kwargs={"pk": 99999})
+        response = self.client.patch(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
