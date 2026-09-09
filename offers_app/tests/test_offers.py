@@ -174,6 +174,17 @@ class OfferRetrievePatchHappyTestCase(OfferBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+class OfferRetrieveDeleteHappyTestCase(OfferBaseTestCase):
+
+    def test_delete_offer(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Offer.objects.filter(pk=offer.pk).exists())
+
+
 class OfferPostUnhappyTestCase(OfferBaseTestCase):
 
     def test_post_offer_unauthenticated(self):
@@ -213,6 +224,7 @@ class OfferGetUnHappyTestCase(OfferBaseTestCase):
             response.status_code,
             status.HTTP_200_OK
         )
+
 
 class OfferRetrieveGetUnHappyTestCase(OfferBaseTestCase):
 
@@ -267,4 +279,34 @@ class OfferRetrievePatchUnHappyTestCase(OfferBaseTestCase):
     def test_patch_offer_not_found(self):
         self.url = reverse("offer", kwargs={"pk": 99999})
         response = self.client.patch(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OfferRetrieveDeleteUnHappyTestCase(OfferBaseTestCase):
+
+    def test_delete_offer_unauthenticated(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        self.client.credentials()
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_offer_forbidden_for_non_owner(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='otheruser@test.de',
+            password='Test12345!'
+        )
+        token = Token.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+        self.url = reverse("offer", kwargs={"pk": offer.pk})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_offer_not_found(self):
+        self.url = reverse("offer", kwargs={"pk": 99999})
+        response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
