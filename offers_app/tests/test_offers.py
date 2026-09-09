@@ -214,7 +214,6 @@ class OfferGetUnHappyTestCase(OfferBaseTestCase):
             status.HTTP_200_OK
         )
 
-
 class OfferRetrieveGetUnHappyTestCase(OfferBaseTestCase):
 
     def test_get_offers_pk_unathenticated(self):
