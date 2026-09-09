@@ -1,4 +1,4 @@
-from offers_app.models import Offer
+from offers_app.models import Offer, OfferDetail
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +9,7 @@ from .permissions import IsBusinessUser, IsCreatorOffers
 from django.db.models import Min
 
 
-from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer, OfferUpdateSerializer
+from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer, OfferUpdateSerializer, OfferDetailSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -86,3 +86,9 @@ class OfferRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
         response_serializer = OfferSerializer(instance)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class OfferDetailRetrieveAPIView(generics.RetrieveAPIView):
+    queryset = OfferDetail.objects.all()
+    serializer_class = OfferDetailSerializer
+    permission_classes = [IsAuthenticated]
