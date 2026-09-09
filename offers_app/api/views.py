@@ -5,11 +5,11 @@ from rest_framework import status
 from rest_framework import filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
-from .permissions import IsBusinessUser
+from .permissions import IsBusinessUser, IsCreatorOffers
 from django.db.models import Min
 
 
-from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer
+from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer, OfferUpdateSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -72,4 +72,17 @@ class OfferListCreateAPIView(generics.ListCreateAPIView):
 class OfferRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferRetrieveSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCreatorOffers]
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return OfferUpdateSerializer
+        return OfferRetrieveSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response_serializer = OfferSerializer(instance)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
