@@ -185,6 +185,21 @@ class OfferRetrieveDeleteHappyTestCase(OfferBaseTestCase):
         self.assertFalse(Offer.objects.filter(pk=offer.pk).exists())
 
 
+class OfferDetailRetrieveHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offer_detail(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        detail_offer = OfferDetail.objects.create(
+            offer=offer, title="Basic Design", revisions=5, delivery_time_in_days=5,
+            price=100, features=['Logo Design'], offer_type="basic")
+        self.url = reverse('offer-detail', kwargs={"pk": detail_offer.pk})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'id': detail_offer.pk, 'title': 'Basic Design', 'revisions': 5, 'delivery_time_in_days': 5,
+                         'price': '100.00', 'features': ['Logo Design'], 'offer_type': 'basic'})
+
+
 class OfferPostUnhappyTestCase(OfferBaseTestCase):
 
     def test_post_offer_unauthenticated(self):
@@ -309,4 +324,24 @@ class OfferRetrieveDeleteUnHappyTestCase(OfferBaseTestCase):
     def test_delete_offer_not_found(self):
         self.url = reverse("offer", kwargs={"pk": 99999})
         response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OfferDetailRetrieveUnHappyTestCase(OfferBaseTestCase):
+
+    def test_get_offer_detail_unauthenticated(self):
+        offer = Offer.objects.create(
+            user=self.user, title='Test Offer', description='Test Beschreibung')
+        detail_offer = OfferDetail.objects.create(
+            offer=offer, title="Basic Design", revisions=5, delivery_time_in_days=5,
+            price=100, features=['Logo Design'], offer_type="basic")
+        self.client.credentials()
+        self.url = reverse("offer-detail", kwargs={"pk": detail_offer.pk})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_offer_detail_not_found(self):
+        self.url = reverse("offer-detail", kwargs={"pk": 99999})
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
