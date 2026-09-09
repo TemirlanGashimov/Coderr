@@ -106,12 +106,45 @@ class OfferRetrieveSerializer(serializers.ModelSerializer):
             'id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at',
             'details', 'min_price', 'min_delivery_time'
         ]
-    
+
     def get_min_price(self, obj):
         result = obj.details.aggregate(Min("price"))
         return result['price__min']
-    
+
     def get_min_delivery_time(self, obj):
-       result = obj.details.aggregate(Min("delivery_time_in_days"))
-       return result['delivery_time_in_days__min']
-    
+        result = obj.details.aggregate(Min("delivery_time_in_days"))
+        return result['delivery_time_in_days__min']
+
+
+class OfferUpdateSerializer(serializers.ModelSerializer):
+
+    details = OfferDetailSerializer(many=True)
+
+    class Meta:
+        model = Offer
+        fields = ['title', 'details']
+
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop('details', None)
+        details = instance.details.all()
+        instance.title = validated_data.get('title', instance.title)
+        instance.save()
+        if details_data:
+            for detail_data in details_data:
+                offer_type = detail_data.get('offer_type', None)
+                detail = details.get(offer_type=offer_type)
+                detail.title = detail_data.get('title', detail.title)
+                detail.revisions = detail_data.get(
+                    'revisions', detail.revisions)
+                detail.delivery_time_in_days = detail_data.get(
+                    'delivery_time_in_days', detail.delivery_time_in_days)
+                detail.price = detail_data.get('price', detail.price)
+                detail.features = detail_data.get('features', detail.features)
+                detail.save()
+        return instance
+
+    def validate_details(self, value):
+        for detail in value:
+            if 'offer_type' not in detail:
+                raise serializers.ValidationError("Each detail must include an offer_type.")
+        return value
