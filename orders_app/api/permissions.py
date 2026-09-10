@@ -6,3 +6,8 @@ class IsCustomer(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.profile.type == 'customer'
+
+class IsBusiness(BasePermission):
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.profile.type == 'business'
