@@ -28,3 +28,8 @@ class OrderSerializer(serializers.ModelSerializer):
             offer_type=offer_detail.offer_type, business_user=offer_detail.offer.user, customer_user=customer_user)
         
         return order
+
+class OrderStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['status']
