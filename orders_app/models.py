@@ -8,6 +8,7 @@ class Order(models.Model):
         ('basic', 'Basic'),
         ('standard', 'Standard'),
         ('premium', 'Premium'),
+        ('cancelled', 'Cancelled')
     ]
 
     STATUS_CHOICES = [
