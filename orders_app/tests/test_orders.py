@@ -29,6 +29,9 @@ class OrderBaseTestCase(TestCase):
             email='business@test.de',
             password='Test12345!'
         )
+        self.business_token, _ = Token.objects.get_or_create(
+            user=self.business_user
+        )
         self.business_profile = UserProfile.objects.create(
             user=self.business_user, type='business')
 
@@ -49,7 +52,8 @@ class OrderCreateHappyTestCase(OrderBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Order.objects.exists())
 
-        order = Order.objects.get(customer_user=self.user, title=self.offer_detail.title)
+        order = Order.objects.get(
+            customer_user=self.user, title=self.offer_detail.title)
         self.assertEqual(order.title, self.offer_detail.title)
 
 
@@ -74,3 +78,29 @@ class OrderCreateUnHappyTestCase(OrderBaseTestCase):
         invalid_data = ({'offer_detail_id': 99999})
         response = self.client.post(self.url, invalid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OrderListHappyTestCase(OrderBaseTestCase):
+    def test_get_orders_for_customer(self):
+        order = Order.objects.create(
+            customer_user=self.user, business_user=self.business_user, title='Test Order', revisions=3,
+            delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'][0]['id'], order.id)
+
+    def test_get_orders_for_business(self):
+        order = Order.objects.create(
+            customer_user=self.user, business_user=self.business_user, title='Test Order', revisions=3,
+            delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key
+        )
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'][0]['id'], order.id)
+
+    def test_get_orders_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
