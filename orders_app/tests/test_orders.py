@@ -100,7 +100,56 @@ class OrderListHappyTestCase(OrderBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['results'][0]['id'], order.id)
 
+
+class OrderListUnHappyTestCase(OrderBaseTestCase):
     def test_get_orders_unauthenticated(self):
         self.client.credentials()
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class OrderUpdateHappyTestCase(OrderBaseTestCase):
+    def test_patch_order_status(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user, title='Test Order',
+                                     revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key)
+        url = reverse('order-detail', kwargs={'pk': order.pk})
+        data = {'status': 'completed'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'completed')
+
+
+class OrderUpdateUnHappyTestCase(OrderBaseTestCase):
+    def test_patch_order_invalid_status(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user, title='Test Order',
+                                     revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key)
+        url = reverse('order-detail', kwargs={'pk': order.pk})
+        data = {'status': 'invalid_status'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_order_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.patch(self.url, self.valid_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_order_forbidden_for_customer(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user,
+                                     title='Test Order', revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        url = reverse('order-detail', kwargs={'pk': order.pk})
+        data = {'status': 'completed'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_order_not_found(self):
+        self.url = reverse('order-detail', kwargs={'pk': 99999})
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key
+        )
+        response = self.client.patch(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
