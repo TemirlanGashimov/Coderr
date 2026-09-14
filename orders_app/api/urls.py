@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import OrderListCreateAPIView, OrderDetailAPIView, OrderCountAPIView
+from .views import OrderListCreateAPIView, OrderDetailAPIView, OrderCountAPIView, OrderCountCompletedAPIView
 
 urlpatterns = [
     path('orders/', OrderListCreateAPIView.as_view(), name='orders'),
     path('orders/<int:pk>/', OrderDetailAPIView.as_view(), name='order-detail'),
-    path('order-count/<int:business_user_id>/', OrderCountAPIView.as_view(), name='order-count')
+    path('order-count/<int:business_user_id>/', OrderCountAPIView.as_view(), name='order-count'),
+    path('completed-order-count/<int:business_user_id>/', OrderCountCompletedAPIView.as_view(), name='completed-order-count')
 ]
