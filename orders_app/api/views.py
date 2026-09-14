@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import filters
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .permissions import IsCustomer, IsBusiness
 from django.db.models import Q
 
@@ -31,3 +31,9 @@ class OrderDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderStatusSerializer
     permission_classes = [IsBusiness, IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            return [IsAdminUser()]
+        else:
+            return [IsBusiness(), IsAuthenticated()]
