@@ -44,6 +44,12 @@ class OrderBaseTestCase(TestCase):
 
         self.valid_data = {"offer_detail_id": self.offer_detail.pk}
 
+        self.admin_user = User.objects.create_user(
+            username='adminuser',
+            password='Test12345!',
+            is_staff=True)
+        self.admin_token, _ = Token.objects.get_or_create(user=self.admin_user)
+
 
 class OrderCreateHappyTestCase(OrderBaseTestCase):
 
@@ -152,4 +158,40 @@ class OrderUpdateUnHappyTestCase(OrderBaseTestCase):
             HTTP_AUTHORIZATION='Token ' + self.business_token.key
         )
         response = self.client.patch(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OrderDeleteHappyTestCase(OrderBaseTestCase):
+
+    def test_delete_order_as_admin(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user, title='Test Order',
+                                     revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
+        url = reverse('order-detail', kwargs={'pk': order.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.filter(pk=order.pk).exists())
+
+class OrderDeleteUnHappyTestCase(OrderBaseTestCase):
+
+    def test_delete_order_unauthenticated(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user, title='Test Order',
+            revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.url = reverse('order-detail', kwargs={'pk': order.pk})
+        self.client.credentials()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_order_as_non_admin(self):
+        order = Order.objects.create(customer_user=self.user, business_user=self.business_user,
+            title='Test Order', revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.url = reverse('order-detail', kwargs={'pk': order.pk})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_order_not_found(self):
+        self.url = reverse('order-detail', kwargs={'pk': 99999})
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
+        response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
