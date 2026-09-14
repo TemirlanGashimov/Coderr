@@ -50,3 +50,13 @@ class OrderCountAPIView(generics.GenericAPIView):
             raise NotFound()
         order_count = Order.objects.filter(business_user=business_user, status='in_progress').count()
         return Response({"order_count": order_count})
+
+class OrderCountCompletedAPIView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        business_user = get_object_or_404(User, pk=business_user_id)
+        if business_user.profile.type != 'business':
+            raise NotFound()
+        completed_order_count = Order.objects.filter(business_user=business_user, status='completed').count()
+        return Response({'completed_order_count': completed_order_count})
