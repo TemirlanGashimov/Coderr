@@ -210,6 +210,8 @@ class OrderCountHappyTestCase(OrderBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["order_count"], 1)
 
+class OrderCountUnHappyTestCase(OrderBaseTestCase):
+
     def test_get_order_count_unauthenticated(self):
         self.url = reverse(
             'order-count', kwargs={'business_user_id': self.business_user.pk})
@@ -219,6 +221,37 @@ class OrderCountHappyTestCase(OrderBaseTestCase):
 
     def test_get_order_count_business_user_not_found(self):
         self.url = reverse('order-count', kwargs={'business_user_id': 9999999})
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code,
+                         status.HTTP_404_NOT_FOUND)
+
+
+
+class CompletedOrderCountHappyTestCase(OrderBaseTestCase):
+
+    def test_get_order_count_success(self):
+        order = Order.objects.create(business_user=self.business_user, status='completed', customer_user=self.user,
+                                     title='Test Order', revisions=3, delivery_time_in_days=5, price=10, features=['Logo Design'], offer_type='basic')
+        self.url = reverse(
+            'completed-order-count', kwargs={'business_user_id': self.business_user.pk})
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["completed_order_count"], 1)
+
+
+class CompletedOrderCountUnHappyTestCase(OrderBaseTestCase):
+
+    def test_get_order_count_unauthenticated(self):
+        self.url = reverse(
+            'completed-order-count', kwargs={'business_user_id': self.business_user.pk})
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_order_count_business_user_not_found(self):
+        self.url = reverse('completed-order-count', kwargs={'business_user_id': 9999999})
         self.client.credentials(
             HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
         response = self.client.get(self.url)
