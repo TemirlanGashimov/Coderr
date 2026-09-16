@@ -23,3 +23,11 @@ class ReviewSerializer(serializers.ModelSerializer):
         if Review.objects.filter(reviewer=self.context['request'].user, business_user=attrs['business_user']).exists():
             raise serializers.ValidationError("You have already reviewed this business user.")
         return attrs
+
+class ReviewUpdateSerializer(serializers.ModelSerializer):
+
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+
+    class Meta:
+        model = Review
+        fields = ['rating', 'description']
