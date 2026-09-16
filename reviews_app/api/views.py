@@ -1,9 +1,10 @@
 from rest_framework import generics
 from reviews_app.models import Review
-from .serializers import ReviewSerializer
+from .serializers import ReviewSerializer, ReviewUpdateSerializer
 from rest_framework.permissions import IsAuthenticated
 from orders_app.api.permissions import IsCustomer
 from rest_framework import filters
+from .permissions import IsReviewOwner
 
 
 class ReviewListCreateAPIView(generics.ListCreateAPIView):
@@ -32,3 +33,11 @@ class ReviewListCreateAPIView(generics.ListCreateAPIView):
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
+
+
+
+class ReviewDetailAPIView(generics.RetrieveUpdateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewUpdateSerializer
+    permission_classes = [IsAuthenticated, IsReviewOwner]
+    
