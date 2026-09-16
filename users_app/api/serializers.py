@@ -1,10 +1,13 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+
 from rest_framework import serializers
+
 from users_app.models import UserProfile
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
+    """Validate and create a user with a marketplace profile."""
 
     repeated_password = serializers.CharField(write_only=True)
 
@@ -17,6 +20,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, attrs):
+        """Validate matching passwords and unique email addresses."""
         if attrs['password'] != attrs['repeated_password']:
             raise serializers.ValidationError(
                 {"password": "Password fields didn't match."}
@@ -30,6 +34,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        """Create the Django user and its selected profile type."""
         validated_data.pop('repeated_password')
         user_type = validated_data.pop('type')
 
@@ -47,10 +52,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
+    """Authenticate a user with username and password credentials."""
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
+        """Authenticate the submitted credentials."""
         user = authenticate(
             username=attrs['username'], password=attrs['password']
         )
@@ -63,6 +70,7 @@ class LoginSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    """Serialize a complete public user profile."""
 
     username = serializers.CharField(source='user.username', read_only=True)
     first_name = serializers.CharField(
@@ -74,6 +82,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
 
     def get_file(self, obj):
+        """Return the profile file URL when a file exists."""
         if not obj.file:
             return ""
         return obj.file.url
@@ -85,12 +94,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """Validate and update editable profile and user fields."""
 
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
 
     def update(self, instance, validated_data):
+        """Update profile fields and the related Django user."""
         user_data = validated_data.pop('user', {})
 
         instance.user.last_name = user_data.get(
@@ -116,6 +127,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
+    """Serialize public business profile information."""
 
     username = serializers.CharField(source='user.username', read_only=True)
     first_name = serializers.CharField(
@@ -124,6 +136,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
 
     def get_file(self, obj):
+        """Return the profile file URL when a file exists."""
         if not obj.file:
             return ""
         return obj.file.url
@@ -135,6 +148,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
 
 
 class CustomerProfileSerializer(serializers.ModelSerializer):
+    """Serialize public customer profile information."""
 
     username = serializers.CharField(source='user.username', read_only=True)
     first_name = serializers.CharField(
@@ -143,6 +157,7 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
 
     def get_file(self, obj):
+        """Return the profile file URL when a file exists."""
         if not obj.file:
             return ""
         return obj.file.url
