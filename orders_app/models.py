@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 
 
 class Order(models.Model):
+    """Represent an order placed for one offer detail."""
 
     OFFER_TYPE_CHOICES = [
         ('basic', 'Basic'),
@@ -30,3 +31,7 @@ class Order(models.Model):
         max_length=30, choices=STATUS_CHOICES, default='in_progress')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        """Return the order title and current status."""
+        return f'{self.title} ({self.status})'
