@@ -7,13 +7,12 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from reviews_app.models import Reviews
+from reviews_app.models import Review
 
 
 class ReviewBaseTestCase(TestCase):
 
     def setUp(self):
-        # Customer
         self.user = User.objects.create_user(
             username='testuser',
             email='max@test.de',
@@ -45,9 +44,9 @@ class ReviewCreateHappyTest(ReviewBaseTestCase):
     def test_create_review_success(self):
         response = self.client.post(self.url, self.valid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Reviews.objects.count(), 1)
+        self.assertEqual(Review.objects.count(), 1)
 
-        review = Reviews.objects.first()
+        review = Review.objects.first()
         self.assertEqual(review.business_user, self.business_user)
         self.assertEqual(review.reviewer, self.user)
         self.assertEqual(review.rating, 5)
@@ -72,3 +71,18 @@ class ReviewCreateUnHappyTest(ReviewBaseTestCase):
         response = self.client.post(
             self.url,   self.valid_data,  format='json')
         self.assertEqual(response.status_code,  status.HTTP_403_FORBIDDEN)
+
+
+class ReviewListHappyTestCase(ReviewBaseTestCase):
+
+    def test_get_review_authenticated(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ReviewListUnHappyTestCase(ReviewBaseTestCase):
+
+    def test_get_reviews_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code,  status.HTTP_401_UNAUTHORIZED)
