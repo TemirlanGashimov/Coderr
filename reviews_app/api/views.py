@@ -1,13 +1,15 @@
-from rest_framework import generics
-from reviews_app.models import Review
-from .serializers import ReviewSerializer, ReviewUpdateSerializer
+from rest_framework import filters, generics
 from rest_framework.permissions import IsAuthenticated
+
 from orders_app.api.permissions import IsCustomer
-from rest_framework import filters
+from reviews_app.models import Review
+
 from .permissions import IsReviewOwner
+from .serializers import ReviewSerializer, ReviewUpdateSerializer
 
 
 class ReviewListCreateAPIView(generics.ListCreateAPIView):
+    """List reviews or create one as an authenticated customer."""
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     filter_backends = [filters.OrderingFilter]
@@ -15,9 +17,11 @@ class ReviewListCreateAPIView(generics.ListCreateAPIView):
     pagination_class = None
 
     def perform_create(self, serializer):
+        """Assign the authenticated user as the review author."""
         serializer.save(reviewer=self.request.user)
 
     def get_queryset(self):
+        """Return reviews filtered by business user or reviewer."""
         queryset = Review.objects.all()
         business_user_id = self.request.query_params.get('business_user_id')
         if business_user_id is not None:
@@ -28,6 +32,7 @@ class ReviewListCreateAPIView(generics.ListCreateAPIView):
         return queryset
 
     def get_permissions(self):
+        """Require customer access for creation and authentication for reads."""
         if self.request.method == 'POST':
             permission_classes = [IsAuthenticated, IsCustomer]
         else:
@@ -35,9 +40,8 @@ class ReviewListCreateAPIView(generics.ListCreateAPIView):
         return [permission() for permission in permission_classes]
 
 
-
 class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a review owned by the requester."""
     queryset = Review.objects.all()
     serializer_class = ReviewUpdateSerializer
     permission_classes = [IsAuthenticated, IsReviewOwner]
-    
