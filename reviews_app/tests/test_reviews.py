@@ -147,3 +147,48 @@ class ReviewPatchUnHappyTestCase(ReviewBaseTestCase):
         self.data = {'rating': 4,   'description': 'Updated review'}
         response = self.client.patch(self.url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ReviewDeleteHappyTestCase(ReviewBaseTestCase):
+
+    def test_delete_review_success(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.'
+        )
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code,  status.HTTP_204_NO_CONTENT)
+
+
+class ReviewDeleteUnHappyTestCase(ReviewBaseTestCase):
+
+    def test_delete_review_unauthenticated(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.')
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.client.credentials()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_review_not_owner(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.')
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_review_not_found(self):
+        self.url = reverse('review-detail', kwargs={'pk': 99999})
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code,   status.HTTP_404_NOT_FOUND)
