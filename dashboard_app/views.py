@@ -1,3 +1,1 @@
-from django.shortcuts import render
-
-# Create your views here.
+"""The dashboard API views are implemented in the api package."""

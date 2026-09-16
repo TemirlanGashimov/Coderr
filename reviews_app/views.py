@@ -1,3 +1,1 @@
-from django.shortcuts import render
-
-# Create your views here.
+"""The reviews API views are implemented in the api package."""

@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+"""Legacy test module kept for Django application compatibility."""

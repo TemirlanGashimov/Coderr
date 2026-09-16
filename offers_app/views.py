@@ -1,3 +1,1 @@
-from django.shortcuts import render
-
-# Create your views here.
+"""The offers API views are implemented in the api package."""
