@@ -1,10 +1,12 @@
 from django.contrib.auth.models import User
+from django.db.models import Min
 from rest_framework import serializers
 from offers_app.models import OfferDetail, Offer
-from django.db.models import Min
+
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
+    """Serialize the fields of one offer pricing tier."""
     class Meta:
         model = OfferDetail
         fields = [
@@ -14,6 +16,7 @@ class OfferDetailSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(serializers.ModelSerializer):
+    """Serialize offers and create their three pricing tiers."""
     details = OfferDetailSerializer(many=True)
 
     class Meta:
@@ -23,6 +26,7 @@ class OfferSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        """Require exactly one basic, standard, and premium tier."""
         details = data.get('details')
 
         if len(details) != 3:
@@ -43,6 +47,7 @@ class OfferSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        """Create an offer together with its nested pricing tiers."""
         details_data = validated_data.pop('details')
         offer = Offer.objects.create(**validated_data)
 
@@ -53,6 +58,7 @@ class OfferSerializer(serializers.ModelSerializer):
 
 
 class OfferDetailListSerializer(serializers.ModelSerializer):
+    """Serialize the identifier URL of an offer detail."""
 
     url = serializers.SerializerMethodField()
 
@@ -63,16 +69,19 @@ class OfferDetailListSerializer(serializers.ModelSerializer):
         ]
 
     def get_url(self, obj):
+        """Build the relative API URL for an offer detail."""
         return f"/offerdetails/{obj.id}/"
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    """Serialize the public identity fields of an offer owner."""
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'username']
 
 
 class OfferListSerializer(serializers.ModelSerializer):
+    """Serialize an offer for list responses with summary values."""
 
     details = OfferDetailListSerializer(many=True, read_only=True)
     min_price = serializers.SerializerMethodField()
@@ -87,15 +96,18 @@ class OfferListSerializer(serializers.ModelSerializer):
         ]
 
     def get_min_price(self, obj):
+        """Return the lowest price among the offer's tiers."""
         result = obj.details.aggregate(Min("price"))
         return result['price__min']
 
     def get_min_delivery_time(self, obj):
+        """Return the shortest delivery time among the offer's tiers."""
         result = obj.details.aggregate(Min("delivery_time_in_days"))
         return result['delivery_time_in_days__min']
 
 
 class OfferRetrieveSerializer(serializers.ModelSerializer):
+    """Serialize an offer for detail responses."""
     details = OfferDetailListSerializer(many=True, read_only=True)
     min_price = serializers.SerializerMethodField()
     min_delivery_time = serializers.SerializerMethodField()
@@ -108,15 +120,18 @@ class OfferRetrieveSerializer(serializers.ModelSerializer):
         ]
 
     def get_min_price(self, obj):
+        """Return the lowest price among the offer's tiers."""
         result = obj.details.aggregate(Min("price"))
         return result['price__min']
 
     def get_min_delivery_time(self, obj):
+        """Return the shortest delivery time among the offer's tiers."""
         result = obj.details.aggregate(Min("delivery_time_in_days"))
         return result['delivery_time_in_days__min']
 
 
 class OfferUpdateSerializer(serializers.ModelSerializer):
+    """Validate and update an offer and its nested pricing tiers."""
 
     details = OfferDetailSerializer(many=True)
 
@@ -125,6 +140,7 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
         fields = ['title', 'details']
 
     def update(self, instance, validated_data):
+        """Update the offer and matching tiers by offer type."""
         details_data = validated_data.pop('details', None)
         details = instance.details.all()
         instance.title = validated_data.get('title', instance.title)
@@ -144,6 +160,7 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
         return instance
 
     def validate_details(self, value):
+        """Ensure every submitted tier identifies its offer type."""
         for detail in value:
             if 'offer_type' not in detail:
                 raise serializers.ValidationError("Each detail must include an offer_type.")
