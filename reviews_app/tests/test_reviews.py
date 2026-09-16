@@ -86,3 +86,64 @@ class ReviewListUnHappyTestCase(ReviewBaseTestCase):
         self.client.credentials()
         response = self.client.get(self.url)
         self.assertEqual(response.status_code,  status.HTTP_401_UNAUTHORIZED)
+
+
+class ReviewPatchHappyTestCase(ReviewBaseTestCase):
+    def test_patch_review_success(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.'
+        )
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.data = {'rating': 4, 'description': 'Noch besser als erwartet!'}
+        response = self.client.patch(self.url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ReviewPatchUnHappyTestCase(ReviewBaseTestCase):
+
+    def test_patch_review_invalid_data(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.')
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.data = {'rating': 6,  'description': 'Invalid rating'}
+        response = self.client.patch(self.url, self. data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_review_unauthenticated(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.'
+        )
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.client.credentials()
+        self.data = {'rating': 4,  'description': 'Updated review'}
+        response = self.client.patch(self.url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_review_not_owner(self):
+        review = Review.objects.create(
+            business_user=self.business_user,
+            reviewer=self.user,
+            rating=5,
+            description='Very good service.'
+        )
+        self.url = reverse('review-detail', kwargs={'pk': review.pk})
+        self.client.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.business_token.key)
+        self.data = {'rating': 4,   'description': 'Updated review'}
+        response = self.client.patch(self.url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_review_not_found(self):
+        self.url = reverse('review-detail', kwargs={'pk': 99999})
+        self.data = {'rating': 4,   'description': 'Updated review'}
+        response = self.client.patch(self.url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
