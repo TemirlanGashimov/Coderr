@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 
 
 class Review(models.Model):
+    """Represent a customer's review of a business user."""
 
     business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='business_reviews')
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='written_reviews')
@@ -18,3 +19,7 @@ class Review(models.Model):
                 name='unique_review_per_business_user'
             )
         ]
+
+    def __str__(self):
+        """Return the reviewed business user and rating."""
+        return f'{self.business_user} ({self.rating}/5)'
