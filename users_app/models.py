@@ -1,10 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Create your models here.
-
 
 class UserProfile(models.Model):
+    """Store marketplace-specific data for a Django user."""
 
     TYPE_CHOICES = [
         ('customer', 'Customer'),
@@ -28,4 +27,5 @@ class UserProfile(models.Model):
         verbose_name_plural = 'User Profiles'
 
     def __str__(self):
+        """Return a readable representation of the profile."""
         return f'{self.user} ({self.type})'
