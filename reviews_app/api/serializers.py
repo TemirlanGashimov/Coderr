@@ -1,4 +1,4 @@
-from reviews_app.models import Reviews
+from reviews_app.models import Review
 from rest_framework import serializers
 
 
@@ -7,7 +7,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     rating = serializers.IntegerField(min_value=1, max_value=5)
 
     class Meta:
-        model = Reviews
+        model = Review
         fields = ['id', 'business_user', 'reviewer', 'rating',
                   'description', 'created_at', 'updated_at']
         read_only_fields = ['id', 'reviewer', 'created_at', 'updated_at']
@@ -20,6 +20,6 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
 
-        if Reviews.objects.filter(reviewer=self.context['request'].user, business_user=attrs['business_user']).exists():
+        if Review.objects.filter(reviewer=self.context['request'].user, business_user=attrs['business_user']).exists():
             raise serializers.ValidationError("You have already reviewed this business user.")
         return attrs
