@@ -1,4 +1,3 @@
-from django.db.models import Min
 from rest_framework import filters, generics, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +6,7 @@ from rest_framework.response import Response
 from offers_app.models import Offer, OfferDetail
 
 from .permissions import IsBusinessUser, IsCreatorOffers
+from .filters import OfferFilterBackend
 from .serializers import OfferSerializer, OfferListSerializer, OfferRetrieveSerializer, OfferUpdateSerializer, OfferDetailSerializer
 
 
@@ -23,8 +23,9 @@ class OfferListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsBusinessUser]
     pagination_class = StandardResultsSetPagination
     serializer_class = OfferSerializer
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    filter_backends = [OfferFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['updated_at', 'min_price']
+    ordering = ['-updated_at']
     search_fields = ['title', 'description']
 
     def get_serializer_class(self):
@@ -36,45 +37,17 @@ class OfferListCreateAPIView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         """Validate and persist a new offer."""
         serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid():
-            self.perform_create(serializer)
-
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         """Assign the authenticated user as the offer owner."""
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        """Return offers filtered by owner, price, and delivery time."""
-        queryset = Offer.objects.all()
-
-        creator_id = self.request.query_params.get('creator_id')
-        if creator_id:
-            queryset = queryset.filter(user__id=creator_id)
-
-        queryset = queryset.annotate(min_price=Min('details__price'))
-        min_price = self.request.query_params.get('min_price')
-        if min_price:
-            queryset = queryset.filter(min_price__gte=min_price)
-
-        max_delivery_time = self.request.query_params.get('max_delivery_time')
-        if max_delivery_time:
-            queryset = queryset.annotate(
-                min_delivery_time=Min('details__delivery_time_in_days'))
-            queryset = queryset.filter(
-                min_delivery_time__lte=max_delivery_time)
-
-        return queryset
+        """Return the base offer queryset for filter backends."""
+        return Offer.objects.all()
 
 
 class OfferRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
