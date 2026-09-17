@@ -35,19 +35,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create the Django user and its selected profile type."""
-        validated_data.pop('repeated_password')
         user_type = validated_data.pop('type')
-
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-        )
-
-        UserProfile.objects.create(
-            user=user,
-            type=user_type
-        )
+        validated_data.pop('repeated_password')
+        user = User.objects.create_user(**validated_data)
+        UserProfile.objects.create(user=user, type=user_type)
         return user
 
 
@@ -103,22 +94,20 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update profile fields and the related Django user."""
         user_data = validated_data.pop('user', {})
-
-        instance.user.last_name = user_data.get(
-            'last_name', instance.user.last_name)
-        instance.user.first_name = user_data.get(
-            'first_name', instance.user.first_name)
-        instance.location = validated_data.get('location', instance.location)
-        instance.tel = validated_data.get('tel', instance.tel)
-        instance.description = validated_data.get(
-            'description', instance.description)
-        instance.working_hours = validated_data.get(
-            'working_hours', instance.working_hours)
-        instance.user.email = user_data.get('email', instance.user.email)
-
+        self._update_user(instance.user, user_data)
+        self._update_profile(instance, validated_data)
         instance.user.save()
         instance.save()
         return instance
+
+    def _update_user(self, user, user_data):
+        for field in ('last_name', 'first_name', 'email'):
+            setattr(user, field, user_data.get(field, getattr(user, field)))
+
+    def _update_profile(self, instance, validated_data):
+        fields = ('location', 'tel', 'description', 'working_hours')
+        for field in fields:
+            setattr(instance, field, validated_data.get(field, getattr(instance, field)))
 
     class Meta:
         model = UserProfile
