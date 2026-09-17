@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
@@ -10,6 +9,7 @@ from rest_framework.response import Response
 from orders_app.models import Order
 
 from .permissions import IsCustomer, IsBusiness
+from .filters import orders_for_business_user, orders_for_user
 from .serializers import OrderSerializer, OrderStatusSerializer
 
 
@@ -22,10 +22,7 @@ class OrderListCreateAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         """Return orders where the requester is customer or business user."""
-        user = self.request.user
-        orders = Order.objects.filter(
-            Q(customer_user=user) | Q(business_user=user))
-        return orders
+        return orders_for_user(self.request.user)
 
     def get_permissions(self):
         """Require authentication for reads and customer access for creates."""
@@ -58,8 +55,8 @@ class OrderCountAPIView(generics.GenericAPIView):
         business_user = get_object_or_404(User, pk=business_user_id)
         if business_user.profile.type != 'business':
             raise NotFound()
-        order_count = Order.objects.filter(
-            business_user=business_user, status='in_progress').count()
+        order_count = orders_for_business_user(
+            business_user, 'in_progress').count()
         return Response({"order_count": order_count})
 
 
@@ -72,6 +69,6 @@ class OrderCountCompletedAPIView(generics.GenericAPIView):
         business_user = get_object_or_404(User, pk=business_user_id)
         if business_user.profile.type != 'business':
             raise NotFound()
-        completed_order_count = Order.objects.filter(
-            business_user=business_user, status='completed').count()
+        completed_order_count = orders_for_business_user(
+            business_user, 'completed').count()
         return Response({'completed_order_count': completed_order_count})
