@@ -1,5 +1,6 @@
 from rest_framework import filters, generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from orders_app.api.permissions import IsCustomer
 from reviews_app.models import Review
@@ -39,3 +40,13 @@ class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewUpdateSerializer
     permission_classes = [IsAuthenticated, IsReviewOwner]
+
+    def update(self, request, *args, **kwargs):
+        """Update a review and return its complete representation."""
+        instance = self.get_object()
+        serializer = ReviewUpdateSerializer(
+            instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response_serializer = ReviewSerializer(instance)
+        return Response(response_serializer.data)
