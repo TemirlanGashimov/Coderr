@@ -43,18 +43,59 @@ Each feature app keeps its API implementation in an `api/` package containing se
 
 Install the dependencies:
 
-```bash
-python -m venv .venv
-# Windows PowerShell
+Windows PowerShell:
+
+```powershell
+py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Create a `.env` file from `.env.template` and provide a secret key:
+Windows CMD:
+
+```bat
+py -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+macOS and Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Create a local `.env` file from `.env.template`. The copy command creates the
+file; then replace the placeholder with your own secret key.
+
+Windows CMD:
+
+```bat
+copy .env.template .env
+```
+
+macOS and Linux:
+
+```bash
+cp .env.template .env
+```
+
+The resulting `.env` file should contain:
 
 ```env
 SECRET_KEY=replace-this-with-a-local-secret
 ```
+
+Generate a secure Django secret key and replace the placeholder after the
+equals sign. The command is the same on Windows, macOS, and Linux:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Never commit the `.env` file or share its secret key.
 
 Apply migrations and start the development server:
 
