@@ -45,6 +45,16 @@ class OrderDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         else:
             return [IsBusiness(), IsAuthenticated()]
 
+    def update(self, request, *args, **kwargs):
+        """Update an order status and return the complete order."""
+        instance = self.get_object()
+        serializer = OrderStatusSerializer(
+            instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response_serializer = OrderSerializer(instance)
+        return Response(response_serializer.data)
+
 
 class OrderCountAPIView(generics.GenericAPIView):
     """Return the number of in-progress orders for a business user."""
