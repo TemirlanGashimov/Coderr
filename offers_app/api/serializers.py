@@ -28,33 +28,31 @@ class OfferSerializer(serializers.ModelSerializer):
     def validate(self, data):
         """Require exactly one basic, standard, and premium tier."""
         details = data.get('details')
+        self._validate_detail_count(details)
+        self._validate_detail_types(details)
+        return data
 
+    def _validate_detail_count(self, details):
         if len(details) != 3:
             raise serializers.ValidationError(
-                "An offer must contain exactly 3 details."
-            )
+                "An offer must contain exactly 3 details.")
 
-        offer_types = []
-
-        for detail in details:
-            offer_types.append(detail.get('offer_type'))
-
-        if set(offer_types) != {'basic', 'standard', 'premium'}:
+    def _validate_detail_types(self, details):
+        offer_types = {detail.get('offer_type') for detail in details}
+        if offer_types != {'basic', 'standard', 'premium'}:
             raise serializers.ValidationError(
-                "Details must contain basic, standard and premium"
-            )
-
-        return data
+                "Details must contain basic, standard and premium")
 
     def create(self, validated_data):
         """Create an offer together with its nested pricing tiers."""
         details_data = validated_data.pop('details')
         offer = Offer.objects.create(**validated_data)
+        self._create_details(offer, details_data)
+        return offer
 
+    def _create_details(self, offer, details_data):
         for detail_data in details_data:
             OfferDetail.objects.create(offer=offer, **detail_data)
-
-        return offer
 
 
 class OfferDetailListSerializer(serializers.ModelSerializer):
@@ -142,22 +140,24 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update the offer and matching tiers by offer type."""
         details_data = validated_data.pop('details', None)
-        details = instance.details.all()
         instance.title = validated_data.get('title', instance.title)
         instance.save()
         if details_data:
-            for detail_data in details_data:
-                offer_type = detail_data.get('offer_type', None)
-                detail = details.get(offer_type=offer_type)
-                detail.title = detail_data.get('title', detail.title)
-                detail.revisions = detail_data.get(
-                    'revisions', detail.revisions)
-                detail.delivery_time_in_days = detail_data.get(
-                    'delivery_time_in_days', detail.delivery_time_in_days)
-                detail.price = detail_data.get('price', detail.price)
-                detail.features = detail_data.get('features', detail.features)
-                detail.save()
+            self._update_details(instance, details_data)
         return instance
+
+    def _update_details(self, instance, details_data):
+        details = instance.details.all()
+        for detail_data in details_data:
+            detail = details.get(offer_type=detail_data.get('offer_type'))
+            self._update_detail(detail, detail_data)
+
+    def _update_detail(self, detail, detail_data):
+        editable_fields = ('title', 'revisions', 'delivery_time_in_days',
+                           'price', 'features')
+        for field in editable_fields:
+            setattr(detail, field, detail_data.get(field, getattr(detail, field)))
+        detail.save()
 
     def validate_details(self, value):
         """Ensure every submitted tier identifies its offer type."""
