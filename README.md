@@ -1,6 +1,23 @@
 # Coderr Backend
 
-Coderr is a Django REST Framework backend for a service marketplace. Users can register as customers or business users, business users can publish offers, customers can place orders and write reviews, and authenticated clients can retrieve dashboard statistics.
+Coderr is a Django REST Framework backend for a service marketplace. Users can register as customers or business users. Business users can publish and manage offers, while customers can place orders and write reviews. The API also provides profile management, authentication, filtering, search, order management, and dashboard statistics.
+
+## Table of Contents
+
+- [Features](#features)
+- [Technology](#technology)
+- [Prerequisites](#prerequisites)
+- [Quickstart](#quickstart)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Authentication](#authentication)
+- [API Endpoints](#api-endpoints)
+- [Pagination](#pagination)
+- [Response Status Codes](#response-status-codes)
+- [Testing and Checks](#testing-and-checks)
+- [Development Notes](#development-notes)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -10,7 +27,7 @@ Coderr is a Django REST Framework backend for a service marketplace. Users can r
 - Order creation and status management
 - Business reviews with rating validation and ownership permissions
 - Dashboard statistics for reviews, ratings, business profiles, and offers
-- Paginated offer listing for the offers endpoint only
+- Paginated offer listing for the offers endpoint
 
 ## Technology
 
@@ -20,63 +37,56 @@ Coderr is a Django REST Framework backend for a service marketplace. Users can r
 - SQLite for local development
 - Token authentication
 
-## Project Structure
+## Prerequisites
 
-```text
-core/                 Django project configuration and root URL routing
-users_app/            Registration, login, profiles, and user permissions
-offers_app/            Offers, offer details, serializers, and permissions
-orders_app/            Orders, order counts, serializers, and permissions
-reviews_app/           Reviews, validation, serializers, and permissions
-dashboard_app/        Dashboard summary endpoint
-manage.py              Django administration entry point
-requirements.txt      Python dependencies
-.env.template         Environment variable template
-```
-
-Each feature app keeps its API implementation in an `api/` package containing serializers, views, URLs, and permissions where required.
-
-## Requirements
+Before setting up the project, make sure the following requirements are available:
 
 - Python 3.12 or newer
-- A virtual environment
+- `pip`
+- Python virtual environment support
 
-Install the dependencies:
+## Quickstart
 
-Windows PowerShell:
+### 1. Create and activate a virtual environment
+
+#### Windows PowerShell
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
 ```
 
-Windows CMD:
+#### Windows CMD
 
 ```bat
 py -m venv .venv
 .venv\Scripts\activate.bat
-pip install -r requirements.txt
 ```
 
-macOS and Linux:
+#### macOS and Linux
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 ```
 
-Create a local `.env` file from `.env.template`. The copy command creates the
-file; then replace the placeholder with your own secret key.
+### 2. Install dependencies
 
-Windows CMD:
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configure environment variables
+
+Create a local `.env` file from `.env.template`.
+
+#### Windows CMD
 
 ```bat
 copy .env.template .env
 ```
 
-macOS and Linux:
+#### macOS and Linux
 
 ```bash
 cp .env.template .env
@@ -88,46 +98,93 @@ The resulting `.env` file should contain:
 SECRET_KEY=replace-this-with-a-local-secret
 ```
 
-Generate a secure Django secret key and replace the placeholder after the
-equals sign. The command is the same on Windows, macOS, and Linux:
+A Django secret key can be generated with:
 
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+Replace the placeholder value in `.env` with the generated key.
+
 Never commit the `.env` file or share its secret key.
 
-Apply migrations and start the development server:
+### 4. Apply migrations
 
 ```bash
 python manage.py migrate
+```
+
+### 5. Start the development server
+
+```bash
 python manage.py runserver
 ```
 
-Create an administrator for the Django admin panel:
+The API is then available at:
+
+```text
+http://127.0.0.1:8000/api/
+```
+
+### 6. Optional: Create an administrator
 
 ```bash
 python manage.py createsuperuser
 ```
 
-The admin panel is available at `http://127.0.0.1:8000/admin/` and requires
-the credentials of a staff user with admin permissions.
+The Django admin panel is available at:
 
-The API is available at `http://127.0.0.1:8000/api/`.
+```text
+http://127.0.0.1:8000/admin/
+```
 
-## Pagination
+## Usage
 
-Pagination is enabled only for `GET /api/offers/`. The endpoint returns up to 10 offers per page by default and supports the `page` and `page_size` query parameters. The maximum page size is 100.
+Register a customer or business account using:
 
-Order, review, and profile list endpoints return regular JSON lists and are not globally paginated.
+```text
+POST /api/registration/
+```
+
+Log in using:
+
+```text
+POST /api/login/
+```
+
+The login response provides an authentication token. Use this token for protected API requests.
+
+Business users can create and manage offers. Customers can create orders from offer details and submit reviews for business users.
+
+Offer listings support filtering, ordering, searching, and pagination.
+
+## Project Structure
+
+```text
+core/                   Django project configuration and root URL routing
+users_app/              Registration, login, profiles, and user permissions
+offers_app/             Offers, offer details, serializers, filters, and permissions
+orders_app/             Orders, order counts, serializers, filters, and permissions
+reviews_app/            Reviews, validation, filters, serializers, and permissions
+dashboard_app/          Dashboard summary endpoint
+manage.py               Django administration entry point
+requirements.txt        Python dependencies
+.env.template           Environment variable template
+```
+
+Each feature app keeps its API implementation in an `api/` package containing serializers, views, URLs, permissions, and filters where required.
 
 ## Authentication
 
-Registration and login are public. Both endpoints return a token. Send that token with protected requests:
+Coderr uses token authentication.
+
+Registration and login are public. Protected endpoints require the token to be sent in the `Authorization` header:
 
 ```http
 Authorization: Token <your-token>
 ```
+
+Permissions depend on the endpoint and the user's profile type. Some operations are restricted to customers, business users, resource owners, or administrators.
 
 ## API Endpoints
 
@@ -149,17 +206,60 @@ Authorization: Token <your-token>
 | GET, PATCH, DELETE | `/api/reviews/<review_id>/` | Read, update, or delete a review |
 | GET | `/api/base-info/` | Read dashboard summary statistics |
 
-Offer listings support `creator_id`, `min_price`, and `max_delivery_time` filters as well as ordering and search parameters supported by Django REST Framework. Review listings support `business_user_id`, `reviewer_id`, and ordering.
+### Offer Query Parameters
+
+`GET /api/offers/` supports:
+
+- `creator_id`
+- `min_price`
+- `max_delivery_time`
+- `ordering`
+- `search`
+- `page`
+- `page_size`
+
+Invalid values for `max_delivery_time` return `400 Bad Request`.
+
+### Review Query Parameters
+
+`GET /api/reviews/` supports:
+
+- `business_user_id`
+- `reviewer_id`
+- `ordering`
+
+Reviews can be ordered by `updated_at` and `rating`.
+
+## Pagination
+
+Pagination is enabled only for:
+
+```text
+GET /api/offers/
+```
+
+The endpoint returns up to 10 offers per page by default and supports:
+
+```text
+?page=<page_number>
+?page_size=<number>
+```
+
+The maximum page size is 100.
+
+Order, review, and profile list endpoints return regular JSON lists and are not globally paginated.
 
 ## Response Status Codes
 
-- `200 OK`: The request was successful.
-- `201 Created`: A resource was created successfully.
-- `204 No Content`: A resource was deleted successfully.
-- `400 Bad Request`: The submitted data failed validation.
-- `401 Unauthorized`: Authentication is required or the token is invalid.
-- `403 Forbidden`: The authenticated user does not have permission.
-- `404 Not Found`: The requested resource does not exist.
+| Status | Meaning |
+| --- | --- |
+| `200 OK` | The request was successful |
+| `201 Created` | A resource was created successfully |
+| `204 No Content` | A resource was deleted successfully |
+| `400 Bad Request` | Submitted data or query parameters failed validation |
+| `401 Unauthorized` | Authentication is required or the token is invalid |
+| `403 Forbidden` | The authenticated user does not have permission |
+| `404 Not Found` | The requested resource does not exist |
 
 ## Testing and Checks
 
@@ -169,27 +269,70 @@ Run Django's system checks:
 python manage.py check
 ```
 
-Run the test suite:
+Run the complete test suite:
 
 ```bash
 python manage.py test
 ```
 
-The tests cover registration, login, profiles, offers, orders, reviews, and dashboard behavior.
+The tests cover:
 
-To measure test coverage, install the coverage tool and run:
+- Registration and login
+- User profiles
+- Offers and offer details
+- Orders
+- Reviews
+- Dashboard statistics
+- Authentication and permissions
+- Validation and error responses
+
+### Test Coverage
+
+Install Coverage.py if it is not already installed:
 
 ```bash
 pip install coverage
+```
+
+Run the tests with coverage:
+
+```bash
 coverage run manage.py test
+```
+
+Display the coverage report:
+
+```bash
 coverage report
 ```
 
-The project excludes local coverage output from version control.
+Coverage output generated locally should not be committed to version control.
 
 ## Development Notes
 
-- The local SQLite database is intentionally excluded from version control.
-- Keep secrets in `.env`; do not commit the file.
-- API routes are grouped by app and included centrally by `core/urls.py`.
-- Serializers expose explicit fields and permissions are declared at the API view level.
+- SQLite is used for local development.
+- The local database is intentionally excluded from version control.
+- Secrets are stored in `.env` and must not be committed.
+- API routes are grouped by app and included centrally through `core/urls.py`.
+- API implementations are separated into feature-specific Django apps.
+- Serializers expose explicit fields.
+- Permissions are defined at the API view level.
+- Offer listings use pagination, while order, review, and profile lists return regular JSON lists.
+- Orders store a snapshot of the selected offer detail when they are created.
+
+## Contributing
+
+Contributions should follow the existing project structure and coding conventions.
+
+Before submitting changes:
+
+1. Create a separate branch for the change.
+2. Keep changes focused on a single feature or fix.
+3. Run the Django system checks.
+4. Run the complete test suite.
+5. Verify that existing API behavior is not broken.
+6. Do not commit local databases, environment files, secrets, or coverage output.
+
+## License
+
+No separate license has been specified for this project.
