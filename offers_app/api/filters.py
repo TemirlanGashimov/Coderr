@@ -1,5 +1,6 @@
 from django.db.models import Min
 from rest_framework.filters import BaseFilterBackend
+from rest_framework.exceptions import ValidationError
 
 
 class OfferFilterBackend(BaseFilterBackend):
@@ -23,6 +24,12 @@ class OfferFilterBackend(BaseFilterBackend):
         max_delivery_time = request.query_params.get('max_delivery_time')
         if not max_delivery_time:
             return queryset
+        try:
+            max_delivery_time = int(max_delivery_time)
+        except ValueError:
+            raise ValidationError(
+                {"max_delivery_time": "Must be a valid integer."}
+            )
         queryset = queryset.annotate(
-            min_delivery_time=Min('details__delivery_time_in_days'))
+                min_delivery_time=Min('details__delivery_time_in_days'))
         return queryset.filter(min_delivery_time__lte=max_delivery_time)
