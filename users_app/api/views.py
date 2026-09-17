@@ -5,7 +5,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from users_app.api.serializers import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer, BusinessProfileSerializer, CustomerProfileSerializer
+from users_app.api.filters import profiles_by_type
 from users_app.models import UserProfile
+
+
+def account_data(user):
+    """Return the shared token response for an authenticated account."""
+    token, _ = Token.objects.get_or_create(user=user)
+    return {'token': token.key, 'username': user.username,
+            'email': user.email, 'user_id': user.id}
 
 
 class RegistrationAPIView(generics.CreateAPIView):
@@ -17,22 +25,9 @@ class RegistrationAPIView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         """Validate registration data and create the account response."""
         serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid():
-            saved_account = serializer.save()
-
-            token, _ = Token.objects.get_or_create(user=saved_account)
-
-            data = {
-                'token': token.key,
-                'username': saved_account.username,
-                'email': saved_account.email,
-                'user_id': saved_account.id,
-            }
-
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        saved_account = serializer.save()
+        return Response(account_data(saved_account), status=status.HTTP_201_CREATED)
 
 
 class LoginAPIView(generics.CreateAPIView):
@@ -44,20 +39,9 @@ class LoginAPIView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         """Validate login data and create the login response."""
         serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid():
-            user = serializer.validated_data['user']
-            token, _ = Token.objects.get_or_create(user=user)
-
-            data = {
-                'token': token.key,
-                'username': user.username,
-                'email': user.email,
-                'user_id': user.id,
-            }
-
-            return Response(data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        return Response(account_data(user), status=status.HTTP_200_OK)
 
 
 class ProfileAPIView(generics.RetrieveUpdateAPIView):
@@ -105,7 +89,7 @@ class BusinessProfileListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         """Return all business profiles."""
-        return UserProfile.objects.filter(type='business')
+        return profiles_by_type('business')
 
 
 class CustomerProfileListAPIView(generics.ListAPIView):
@@ -116,4 +100,4 @@ class CustomerProfileListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         """Return all customer profiles."""
-        return UserProfile.objects.filter(type='customer')
+        return profiles_by_type('customer')
