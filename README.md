@@ -63,6 +63,15 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Create an administrator for the Django admin panel:
+
+```bash
+python manage.py createsuperuser
+```
+
+The admin panel is available at `http://127.0.0.1:8000/admin/` and requires
+the credentials of a staff user with admin permissions.
+
 The API is available at `http://127.0.0.1:8000/api/`.
 
 ## Pagination
