@@ -90,6 +90,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
+    file = serializers.FileField(required=False)
 
     def update(self, instance, validated_data):
         """Update profile fields and the related Django user."""
@@ -105,13 +106,13 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             setattr(user, field, user_data.get(field, getattr(user, field)))
 
     def _update_profile(self, instance, validated_data):
-        fields = ('location', 'tel', 'description', 'working_hours')
+        fields = ('file', 'location', 'tel', 'description', 'working_hours')
         for field in fields:
             setattr(instance, field, validated_data.get(field, getattr(instance, field)))
 
     class Meta:
         model = UserProfile
-        fields = ['first_name', 'last_name', 'location',
+        fields = ['first_name', 'last_name','file', 'location',
                   'tel', 'description', 'working_hours', 'email']
 
 
