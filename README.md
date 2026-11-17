@@ -1,9 +1,10 @@
-
-### Project Credits
+## Project Credits
 
 **Backend:** Developed by me using Python, Django and Django REST Framework.
 
 **Frontend:** Provided by [Developer Akademie](https://developerakademie.com/) as part of the professional training program.
+
+**Original Frontend Repository:** [Developer Akademie – Coderr Frontend](https://github.com/Developer-Akademie-Backendkurs/project.Coderr)
 
 This project was developed for educational and portfolio purposes.
 
