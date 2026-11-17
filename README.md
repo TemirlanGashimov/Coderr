@@ -1,3 +1,13 @@
+
+### Project Credits
+
+**Backend:** Developed by me using Python, Django and Django REST Framework.
+
+**Frontend:** Provided by [Developer Akademie](https://developerakademie.com/) as part of the professional training program.
+
+This project was developed for educational and portfolio purposes.
+
+
 # Coderr Backend
 
 Coderr is a Django REST Framework backend for a service marketplace. Users can register as customers or business users. Business users can publish and manage offers, while customers can place orders and write reviews. The API also provides profile management, authentication, filtering, search, order management, and dashboard statistics.
